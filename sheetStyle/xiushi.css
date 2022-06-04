@@ -1,0 +1,45 @@
+#viewDiv {
+	position: absolute;
+	top: 55px;
+	left: 0px;
+    width: 800px;
+    height: 650px;
+    border: 1px solid black;
+    float: left;
+}
+
+#table{
+	position: absolute;
+	top: 57px;
+	left: 800px;
+	width: 600px;
+	height: 400px;
+	border: 1px solid black;
+	float: left;
+	
+}
+
+#weather1
+{
+    text-align:center;
+    color : #dcdcdc;
+	background-color: #212529;
+	border: none;
+}
+
+#word
+{
+	position: absolute;
+	top: 470px;
+	left: 800px;
+/* 	width: 600px;
+	height: 400px; */
+	border: 1px solid black;
+	float: left;
+	border: none;
+}
+
+
+
+
+

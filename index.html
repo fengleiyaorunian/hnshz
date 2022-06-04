@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>7.21浚县玉米地受灾情况</title>
+
+		<script src="javascript/jquery.js"></script>
+
+		<link rel="stylesheet" href="sheetStyle/discribe.css">
+		<link rel="stylesheet" href="https://js.arcgis.com/4.23/esri/themes/light/main.css">
+
+		<link rel="stylesheet" href="sheetStyle/xiushi.css">
+
+		<!-- Echarts的调用 -->
+		<script rel="stylesheet" src="javascript/echarts.min.js"></script>
+
+		<!-- 新 Bootstrap5 核心 CSS 文件 -->
+		<link href="https://cdn.staticfile.org/twitter-bootstrap/5.1.1/css/bootstrap.min.css" rel="stylesheet">
+		<script src="https://cdn.staticfile.org/twitter-bootstrap/5.1.1/js/bootstrap.bundle.min.js"></script>
+
+		<script src="https://js.arcgis.com/4.23/"></script> <!-- 必须放在最后，不然会报错 -->
+	</head>
+
+	<body>
+
+		<div id="viewDiv"></div>
+		<div id="table"></div>
+
+		<nav class="navbar navbar-expand-md bg-dark navbar-dark">
+			<a class="navbar-brand">GIS-3</a>
+			<div class="collapse navbar-collapse" id="collapsibleNavbar">
+				<ul class="navbar-nav">
+					<li class="nav-item active">
+						<a class="nav-link"
+							href="https://baike.baidu.com/item/%E6%B5%9A%E5%8E%BF/1022906?fr=aladdin">浚县简介</a>
+					</li>
+
+					<!-- 遥感影像的下拉菜单 -->
+					<li class="nav-item dropdown">
+						<a class="nav-link dropdown-toggle" href="#" id="navbardrop" data-bs-toggle="dropdown">
+							哨兵二号影像
+						</a>
+						<div class="dropdown-menu">
+
+							<span><input id="check1" type="checkbox" checked>
+								2021年7月30日-洪灾8天后
+								(真假彩色)</span>
+
+							<br>
+							<span><input id="check2" type="checkbox" checked>
+								2020年9月4日-无洪灾
+								(真假彩色)</span>
+						</div>
+					</li>
+
+					<li class="nav-item">
+						<button id="weather1" class="nav-link">气象数据</button>
+					</li>
+				</ul>
+			</div>
+		</nav>
+
+		<p id= "word">   2021年7月21日，河南西北、中部遭遇百年不遇的大暴雨，仅数小时的降水，便宜突破了一些地区一年的降水量极值。<br>   其中浚县由于暴雨连降、上游来水、水库泄洪，导致卫河和共产主义渠水位暴涨，河堤多处出现漫堤、管涌、渗水甚至决堤，加上境内4个蓄滞洪区启用，造成大面积受灾，损失极为惨重。截至28日20时，受灾人口58.8万人，直接经济损失超过97.6亿元。<br>利用遥感影像的真彩色和假彩色（近红外）的方式可以清晰的看到洪灾淹没的区域。 </p>
+
+		<script>
+			require(["esri/config", "esri/Map", "esri/views/MapView", "esri/layers/FeatureLayer",
+					"esri/core/watchUtils", "esri/Basemap", "esri/widgets/Swipe",
+					"esri/layers/MapImageLayer",
+					"esri/views/SceneView",
+					"esri/layers/BaseDynamicLayer",
+				],
+				function(esriConfig, Map, MapView, FeatureLayer, watchUtils, basemap, Swipe,
+					MapImageLayer, SceneView, BaseDynamicLayer) {
+					esriConfig.apiKey = "YOUR_API_KEY";
+
+					const map = new Map({
+						basemap: "satellite", // Basemap layer service
+						// layers: [permitsLayer]
+					});
+
+					const view = new MapView({
+						map: map,
+						center: [114.31143, 35.36443], // Longitude, latitude
+						zoom: 11, // Zoom level
+						container: "viewDiv" // Div element
+					});
+
+					var CustomImageOverlayLayer = BaseDynamicLayer.createSubclass({
+						properties: {
+							picUrl: null,
+							extent: null,
+							image: null,
+							canvas: null,
+						},
+
+						// Override the getImageUrl() method to generate URL
+						// to an image for a given extent, width, and height.
+						getImageUrl: function(extent, width, height) {
+							//新Image对象，可以理解为DOM 
+							if (!this.image) {
+								this.image = new Image();
+							}
+							this.image.src = this.picUrl;
+
+							// 创建canvas DOM元素，并设置其宽高和图片一样   
+							if (!this.canvas) {
+								this.canvas = canvas = document.createElement("canvas");
+							}
+							this.canvas.width = 822;
+							this.canvas.height = 796;
+
+							//左上角地理坐标转换屏幕坐标,为了获取canvas绘制图片的起点
+							var mapPoint = {
+								x: this.extent.xmin,
+								y: this.extent.ymax,
+								spatialReference: {
+									wkid: 4326
+								}
+							};
+							var screenPoint = view.toScreen(mapPoint);
+							//根据extent范围计算canvas绘制图片的宽度以及高度
+							//左下角
+							var leftbottom = {
+								x: this.extent.xmin,
+								y: this.extent.ymin,
+								spatialReference: {
+									wkid: 4326
+								}
+							};
+							var screen_leftbottom = view.toScreen(leftbottom);
+							//右上角
+							var righttop = {
+								x: this.extent.xmax,
+								y: this.extent.ymax,
+								spatialReference: {
+									wkid: 4326
+								}
+							};
+
+							var screen_righttop = view.toScreen(righttop);
+							this.canvas.getContext("2d").drawImage(this.image, screenPoint.x, screenPoint.y, Math
+								.abs(screen_righttop.x - screen_leftbottom.x), Math.abs(screen_righttop.y -
+									screen_leftbottom.y));
+							return this.canvas.toDataURL("sheetStyle/321_2020_9_4.png");
+
+						}
+					});
+
+					document.getElementById("check1").addEventListener('click', function() {
+						// for(var i = 0, map[i])
+						if (this.checked == true) {
+							view.ui.empty();
+							var ImageOverlayLayer1 = new CustomImageOverlayLayer({
+								picUrl: "sheetStyle/432_2021_7_30.png",
+								extent: {
+									xmin: 114.13445444,
+									ymin: 35.25425012,
+									xmax: 114.45321108,
+									ymax: 35.52212047
+								}
+							});
+							map.add(ImageOverlayLayer1);
+							//地图移动刷新,防止地图初始化时候，图片叠加图层加载刷新不过来
+							setTimeout(function() {
+								var center = view.center.clone();
+								center.x -= 0.001; //底图是经纬度
+								view.center = center;
+								view.goTo(view.center, {
+									speedFactor: 0.1,
+									easing: "linear" //linear, in-cubic, out-cubic, in-out-cubic, in-expo, out-expo, in-out-expo
+								});
+							}, 500);
+
+
+							var ImageOverlayLayer2 = new CustomImageOverlayLayer({
+								picUrl: "sheetStyle/321_2021_7_30.png",
+								extent: {
+									xmin: 114.13445444,
+									ymin: 35.25425012,
+									xmax: 114.45321108,
+									ymax: 35.52212047
+								}
+							});
+
+							map.add(ImageOverlayLayer2);
+
+							//地图移动刷新,防止地图初始化时候，图片叠加图层加载刷新不过来
+							setTimeout(function() {
+								var center = view.center.clone();
+								center.x -= 0.001; //底图是经纬度
+								view.center = center;
+								view.goTo(view.center, {
+									speedFactor: 0.1,
+									easing: "linear" //linear, in-cubic, out-cubic, in-out-cubic, in-expo, out-expo, in-out-expo
+								});
+							}, 500);
+
+
+							let swipe = new Swipe({
+								view: view,
+								leadingLayers: [ImageOverlayLayer1],
+								trailingLayers: [ImageOverlayLayer2],
+								direction: "vertical", // swipe widget will move from top to bottom of view
+								position: 25 // position set to middle of the view (50%)
+							});
+							view.ui.add(swipe);
+
+						} else {
+							view.ui.empty();
+							map.removeAll("sheetStyle/432_2021_7_30.png");
+						}
+
+					});
+
+
+					document.getElementById("check2").addEventListener('click', function() {
+						if (this.checked == true) {
+							view.ui.empty();
+							var ImageOverlayLayer3 = new CustomImageOverlayLayer({
+								picUrl: "sheetStyle/432_2020_9_4.png",
+								extent: {
+									xmin: 114.13445444,
+									ymin: 35.25425012,
+									xmax: 114.45321108,
+									ymax: 35.52212047
+								}
+							});
+							map.add(ImageOverlayLayer3);
+
+							//地图移动刷新,防止地图初始化时候，图片叠加图层加载刷新不过来
+							setTimeout(function() {
+								var center = view.center.clone();
+								center.x -= 0.001; //底图是经纬度
+								view.center = center;
+								view.goTo(view.center, {
+									speedFactor: 0.1,
+									easing: "linear" //linear, in-cubic, out-cubic, in-out-cubic, in-expo, out-expo, in-out-expo
+								});
+							}, 500);
+
+							var ImageOverlayLayer4 = new CustomImageOverlayLayer({
+								picUrl: "sheetStyle/321_2020_9_4.png",
+								extent: {
+									xmin: 114.13445444,
+									ymin: 35.25425012,
+									xmax: 114.45321108,
+									ymax: 35.52212047
+								}
+							});
+							map.add(ImageOverlayLayer4);
+
+							console.log(ImageOverlayLayer3);
+							console.log(ImageOverlayLayer4);
+
+							//地图移动刷新,防止地图初始化时候，图片叠加图层加载刷新不过来
+							setTimeout(function() {
+								var center = view.center.clone();
+								center.x -= 0.001; //底图是经纬度
+								view.center = center;
+								view.goTo(view.center, {
+									speedFactor: 0.1,
+									easing: "linear" //linear, in-cubic, out-cubic, in-out-cubic, in-expo, out-expo, in-out-expo
+								});
+							}, 500);
+
+							let swipe = new Swipe({
+								view: view,
+								leadingLayers: [ImageOverlayLayer3],
+								trailingLayers: [ImageOverlayLayer4],
+								direction: "vertical", // swipe widget will move from top to bottom of view
+								position: 25 // position set to middle of the view (50%)
+							});
+							view.ui.add(swipe);
+
+
+						} else {
+							view.ui.empty();
+							map.removeAll("sheetStyle/432_2020_9_4.png");
+						}
+					});
+
+
+					document.getElementById("weather1").addEventListener('click', function() {
+
+						var myChart = echarts.init(document.getElementById('table'));
+
+						var option;
+
+						option = {
+							title: {
+								text: '7.18-7.24 的气温变化'
+							},
+							tooltip: {
+								trigger: 'axis'
+							},
+							legend: {},
+							toolbox: {
+								show: true,
+								feature: {
+									dataZoom: {
+										yAxisIndex: 'none'
+									},
+									dataView: {
+										readOnly: false
+									},
+									magicType: {
+										type: ['line', 'bar']
+									},
+									restore: {},
+									saveAsImage: {}
+								}
+							},
+							xAxis: {
+								type: 'category',
+								boundaryGap: false,
+								data: ['7.18', '7.19', '7.20（暴雨）', '7.21（暴雨）', '7.22（大雨）', '7.23', '7.24']
+							},
+							yAxis: {
+								type: 'value',
+								axisLabel: {
+									formatter: '{value} °C'
+								}
+							},
+							series: [{
+									name: 'Highest',
+									type: 'line',
+									data: [29, 27, 24, 26, 27, 29, 33],
+									markPoint: {
+										data: [{
+												type: 'max',
+												name: 'Max'
+											},
+											{
+												type: 'min',
+												name: 'Min'
+											}
+										]
+									},
+									markLine: {
+										data: [{
+											type: 'average',
+											name: 'Avg'
+										}]
+									}
+								},
+								{
+									name: 'Lowest',
+									type: 'line',
+									data: [22, 22, 22, 23, 21, 22, 22],
+									markPoint: {
+										data: [{
+											name: '周最低',
+											value: 21,
+											xAxis: 4,
+											yAxis: 21
+										}]
+									},
+									markLine: {
+										data: [{
+												type: 'average',
+												name: 'Avg'
+											},
+											[{
+													symbol: 'none',
+													x: '90%',
+													yAxis: 'max'
+												},
+												{
+													symbol: 'circle',
+													label: {
+														position: 'start',
+														formatter: 'Max'
+													},
+													type: 'max',
+													name: '最高点'
+												}
+											]
+										]
+									}
+								}
+							]
+						};
+
+						option && myChart.setOption(option);
+					});
+
+				});
+		</script>
+	</body>
+</html>
